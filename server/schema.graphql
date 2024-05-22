@@ -1,14 +1,17 @@
 type Query {
+  company(id: ID!): Company
+  job(id: ID!): Job
   jobs: [Job!]
 }
 
 """
-presentaion __Compnay__ Type
+presentaion __Company__ Type
 """
-type Compnay {
+type Company {
   id: ID!
   name: String!
   description: String
+  jobs: [Job!]!
 }
 
 """
@@ -21,6 +24,6 @@ type Job {
   """
   date: String!
   title: String!
-  compnay: Compnay!
+  company: Company!
   description: String
 }
