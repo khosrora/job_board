@@ -1,9 +1,26 @@
 type Query {
-  job: Job
+  jobs: [Job!]
 }
 
+"""
+presentaion __Compnay__ Type
+"""
+type Compnay {
+  id: ID!
+  name: String!
+  description: String
+}
+
+"""
+presentaion __Job__ Type
+"""
 type Job {
-  id: ID
-  title: String
+  id: ID!
+  """
+  this a __document__ example
+  """
+  date: String!
+  title: String!
+  compnay: Compnay!
   description: String
 }
