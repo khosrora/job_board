@@ -22,16 +22,21 @@ export const resolvers = {
     },
 
     Mutation: {
-        createJob: async (__root, { input: { title, description } }) => {
-            const companyId = "FjcJCHJALA4i" //TODO set based user
+        createJob: async (__root, { input: { title, description } }, { user }) => {
+            if (!user) return unAuthorizeError();
+            const companyId = user.companyId
             return createJob({ companyId, title, description })
         },
-        deleteJob: async (__root, { id }) => {
-            const res = await deleteJob(id);
-            return res;
+        deleteJob: async (__root, { id }, { user }) => {
+            if (!user) return unAuthorizeError();
+            const companyId = user.companyId
+            const job = await deleteJob(id, companyId);
+            return job;
         },
-        updateJob: async (__root, { input: { id, title, description } }) => {
-            const res = await updateJob({ id, title, description });
+        updateJob: async (__root, { input: { id, title, description } }, { user }) => {
+            if (!user) return unAuthorizeError();
+            const companyId = user.companyId
+            const res = await updateJob({ id, title, description , companyId });
             return res;
         }
     },
@@ -52,6 +57,14 @@ function notFoundError(message, id) {
     return new GraphQLError('no Company with id' + id, {
         extensions: {
             code: "NOT_FOUND"
+        }
+    })
+}
+
+function unAuthorizeError() {
+    return new GraphQLError('un authorize', {
+        extensions: {
+            code: "UN_AUTHORIZE"
         }
     })
 }

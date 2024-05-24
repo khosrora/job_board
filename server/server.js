@@ -5,6 +5,7 @@ import { ApolloServer } from '@apollo/server';
 import { readFile } from 'fs/promises'
 import { expressMiddleware as apolloMiddleware } from '@apollo/server/express4';
 import { resolvers } from './resolvers.js'
+import { getUser } from './db/users.js';
 
 const PORT = 9000;
 
@@ -15,12 +16,20 @@ app.post('/login', handleLogin);
 
 const typeDefs = await readFile('./schema.graphql', 'utf-8');
 
+async function geContext({ req }) {
+  if (req.auth) {
+    const user = await getUser(req.auth.sub);
+    return { user }
+  }
+  return {}
+}
+
 const apolloService = new ApolloServer({
   typeDefs,
   resolvers,
 });
 await apolloService.start();
-app.use('/graphql', apolloMiddleware(apolloService))
+app.use('/graphql', apolloMiddleware(apolloService, { context: geContext }))
 
 app.listen({ port: PORT }, () => {
   console.log(`Server running on port ${PORT}`);
