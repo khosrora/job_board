@@ -1,38 +1,83 @@
-import { gql, GraphQLClient } from 'graphql-request'
+import { ApolloClient, InMemoryCache, gql, createHttpLink, concat, ApolloLink } from '@apollo/client'
 import { getAccessToken } from '../auth';
 
-const endpoint = 'http://localhost:9000/graphql'
-const client = new GraphQLClient(endpoint, {
-    headers: () => {
-        const accessToken = getAccessToken()
-        if (accessToken) {
-            return {
-                'Authorization': `Bearer ${accessToken}`
-            }
-        }
-        return {}
+const httpLink = createHttpLink({
+    uri: "http://localhost:9000/graphql"
+})
+
+const customLink = new ApolloLink((operation, forward) => {
+    const accessToken = getAccessToken()
+    if (accessToken) {
+        operation.setContext({
+            headers: { 'Authorization': `Bearer ${accessToken}` }
+        })
     }
-});
+    return forward(operation)
+})
+
+const jobByIdQuery = gql`
+query jobById($id : ID!) {
+    job(id: $id) {
+            id
+            date
+            title
+            company {
+               id
+               name
+            }
+            description
+    }
+}       
+`
+
+const apolloClient = new ApolloClient({
+    link: concat(customLink, httpLink),
+    cache: new InMemoryCache(),
+    // defaultOptions: {
+    //     query: {
+    //         fetchPolicy: "network-only"
+    //     },
+    //     watchQuery: {
+    //         fetchPolicy: 'network-only'
+    //     }
+    // }
+})
 
 export async function createJob({ title, description }) {
-    const mutation = `
-    mutation createJob ($input: createJobInput) {
-        job : createJob(input: $input) {
-          id
-          title
-          description
+    const mutation = gql`
+         mutation createJob ($input: createJobInput!) {
+                 job : createJob(input: $input) {
+                  id
+                  title
+                  description 
+                  company {
+                    id 
+                    name
+                  }
+             }
+         }`;
+
+    const { data } = await apolloClient.mutate({
+        mutation,
+        variables: {
+            input: { title, description },
+        },
+        update: (cache, { data }) => {
+            console.log(data);
+            cache.writeQuery({
+                query: jobByIdQuery,
+                variables: { id: data.job.id },
+                data
+            })
         }
-    }
-    `;
-    const job = await client.request(mutation, {
-        input: { title, description }
-    });
-    return job;
+    })
+
+    return data.job;
 }
 
 export async function getJobs() {
     const query = gql`
-        query {
+        query getJobs {
             jobs {
                 id
                 date
@@ -44,27 +89,22 @@ export async function getJobs() {
             }
         }          
     `
-    const { jobs } = await client.request(query);
-    return jobs;
+    const { data } = await apolloClient.query({ query })
+    return data.jobs;
 }
 
 export async function getJob(id) {
-    const query = gql`
-        query jobById($id : ID!) {
-            job(id: $id) {
-                    id
-                    date
-                    title
-                    company {
-                       id
-                       name
-                    }
-                    description
-            }
-        }       
-    `
-    const { job } = await client.request(query, { id });
-    return job;
+
+
+    const { data } = await apolloClient.query({
+        query: jobByIdQuery,
+        fetchPolicy: 'network-only',
+        variables: {
+            id
+        }
+    });
+
+    return data.job;
 }
 
 export async function getCompany(id) {
@@ -83,6 +123,12 @@ export async function getCompany(id) {
         }
     }      
     `;
-    const { company } = await client.request(query, { id });
-    return company;
+    // const { company } = await client.request(query, { id });
+    const { data } = await apolloClient.query({
+        query,
+        variables: {
+            id
+        }
+    })
+    return data.company;
 }

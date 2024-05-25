@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import JobList from '../components/JobList';
-import { companies } from '../lib/fake-data';
 import { getCompany } from '../lib/graphql/queries';
 
 function CompanyPage() {

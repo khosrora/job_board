@@ -8,7 +8,6 @@ function HomePage() {
     getJobs().then(res => setJobs(res))
   }, [])
 
-  console.log(jobs);
   return (
     <div>
       <h1 className="title">
